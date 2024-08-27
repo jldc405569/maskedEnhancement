@@ -19,21 +19,22 @@ for ii = 1:li
         im = ref + sigmas(ss)*randn(size(ref));
         aux_titl = [sprintf('Im %d, ',im_idx(ii)),'$\sigma=$',sprintf(' %.1e',logs(ss))];
         aux_titl = 'Array of images';
-        [im_ed,im_df,im_tv] = unsharpTVdiff(ref,im,show_fig,aux_titl,0.7,200);
+        quantTH = 0.7; % Manually tune this threshold for the TV mask
+        diffCoeff = 200; % Manually tune the diffusion coefficient
+        [im_ed,im_df,im_tv] = unsharpTVdiff(ref,im,show_fig,aux_titl,quantTH,diffCoeff);
         im = removeBackgroundHard(im).*im;
-        for store_MSE_SNR = 1
-            mse_im(ii,ss) = mean((im-ref).^2,'all')/nrm_rf;
-            mse_ed(ii,ss) = mean((im_ed-ref).^2,'all')/nrm_rf;
-            mse_df(ii,ss) = mean((im_df-ref).^2,'all')/nrm_rf;
-            mse_tv(ii,ss) = mean((im_tv-ref).^2,'all')/nrm_rf;
-            snr_im(ii,ss) = SNR2(im,snrIdx(im_idx(ii),:));
-            snr_ed(ii,ss) = SNR2(im_ed,snrIdx(im_idx(ii),:));
-            snr_df(ii,ss) = SNR2(im_df,snrIdx(im_idx(ii),:));
-            snr_tv(ii,ss) = SNR2(im_tv,snrIdx(im_idx(ii),:));
-        end
+        % Store MSE and SNR
+        mse_im(ii,ss) = mean((im-ref).^2,'all')/nrm_rf;
+        mse_ed(ii,ss) = mean((im_ed-ref).^2,'all')/nrm_rf;
+        mse_df(ii,ss) = mean((im_df-ref).^2,'all')/nrm_rf;
+        mse_tv(ii,ss) = mean((im_tv-ref).^2,'all')/nrm_rf;
+        snr_im(ii,ss) = SNR2(im,snrIdx(im_idx(ii),:));
+        snr_ed(ii,ss) = SNR2(im_ed,snrIdx(im_idx(ii),:));
+        snr_df(ii,ss) = SNR2(im_df,snrIdx(im_idx(ii),:));
+        snr_tv(ii,ss) = SNR2(im_tv,snrIdx(im_idx(ii),:));
     end
 end
-%%
+%% PLOTS
 if numDims(mse_tv) == 1
     linePlots(sigmas, mse_im, mse_df, mse_ed, mse_tv, ...
               'MR', snr_im, snr_df, snr_ed, snr_tv);
