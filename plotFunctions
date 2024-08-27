@@ -42,7 +42,7 @@ function[] = meshPlots(sigmas, im_vc, mse_im, mse_df, mse_ed, mse_tv, ...
     plot(sigmas, squeeze(mean(mse_df,1)), 'm', 'DisplayName', 'Diffusion');
     plot(sigmas, squeeze(mean(mse_ed,1)), 'b', 'DisplayName', 'Raw TV Edges');
     plot(sigmas, squeeze(mean(mse_tv,1)), 'g', 'DisplayName', 'Diffused TV Edges');
-    legend('Interpreter','latex'); title('MSE against noise std','Interpreter','latex','FontSize',13); axis tight
+    legend('Interpreter','latex'); title('MSE against noise $\sigma$','Interpreter','latex','FontSize',13); axis tight
     xlabel('Noise $\sigma$','Interpreter','latex','FontSize',11); ylabel('MSE','Interpreter','latex','FontSize',11)
     
     subplot(2,2,4); hold on;
