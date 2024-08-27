@@ -1,0 +1,59 @@
+im_size = [255,205]; pixel_size = 0.6;
+% Get images
+ims = ; % Your array of images 
+snrIdx = ; % Must define an array of rows [x1,x2,y1,y2] for each image with squares of homogeneous areas
+% Image
+show_fig = false;
+im_idx = 1:size(ims,3); li = length(im_idx);
+ls = 20;
+mse_im = zeros(li,ls); mse_ed = zeros(li,ls); mse_df = zeros(li,ls); mse_tv = zeros(li,ls);
+snr_im = zeros(li,ls); snr_ed = zeros(li,ls); snr_df = zeros(li,ls); snr_tv = zeros(li,ls);
+if show_fig && li*ls>4
+    input('CUT THE CAMERAS! PC is about to crash, stop running')
+end
+for ii = 1:li
+    ref = squeeze(ims(:,:,im_idx(ii))); nrm_rf = norm(ref);
+    logs = logspace(-1,0,ls);
+    sigmas = logs.*std(ref(removeBackgroundHard(ref)));
+    for ss = 1:ls
+        im = ref + sigmas(ss)*randn(size(ref));
+        aux_titl = [sprintf('Im %d, ',im_idx(ii)),'$\sigma=$',sprintf(' %.1e',logs(ss))];
+        aux_titl = 'Array of images';
+        [im_ed,im_df,im_tv] = unsharpTVdiff(ref,im,show_fig,aux_titl,0.7,200);
+        im = removeBackgroundHard(im).*im;
+        for store_MSE_SNR = 1
+            mse_im(ii,ss) = mean((im-ref).^2,'all')/nrm_rf;
+            mse_ed(ii,ss) = mean((im_ed-ref).^2,'all')/nrm_rf;
+            mse_df(ii,ss) = mean((im_df-ref).^2,'all')/nrm_rf;
+            mse_tv(ii,ss) = mean((im_tv-ref).^2,'all')/nrm_rf;
+            snr_im(ii,ss) = SNR2(im,snrIdx(im_idx(ii),:));
+            snr_ed(ii,ss) = SNR2(im_ed,snrIdx(im_idx(ii),:));
+            snr_df(ii,ss) = SNR2(im_df,snrIdx(im_idx(ii),:));
+            snr_tv(ii,ss) = SNR2(im_tv,snrIdx(im_idx(ii),:));
+        end
+    end
+end
+%%
+if numDims(mse_tv) == 1
+    linePlots(sigmas, mse_im, mse_df, mse_ed, mse_tv, ...
+              'MR', snr_im, snr_df, snr_ed, snr_tv);
+else
+    meshPlots(sigmas, 1:li, mse_im, mse_df, mse_ed, mse_tv, ...
+              'MR', snr_im, snr_df, snr_ed, snr_tv)
+end
+%% One-sided t-tests
+tvedge_tvdiff = []; % TV Edge error is bigger than Diffused TV Edge
+fprintf('Edge>TV')
+for ss = 1:length(sigmas)
+    [h, p, ci, stats] = ttest(mse_ed(:,ss), mse_tv(:,ss), 'Tail', 'right');
+    tvedge_tvdiff = [tvedge_tvdiff, p];
+    fprintf('\t %.5f',p)
+end
+
+diff_tvdiff = []; % Diffusion error is bigger than Diffused TV Edge
+fprintf('\nDiff>TV')
+for ss = 1:length(sigmas)
+    [h, p, ci, stats] = ttest(mse_df(:,ss), mse_tv(:,ss), 'Tail', 'right');
+    diff_tvdiff = [diff_tvdiff, p];
+    fprintf('\t %.5f',p)
+end
