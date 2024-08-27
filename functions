@@ -1,0 +1,98 @@
+function[im_enh,im_enhDiff,im_enhTV] = unsharpTVdiff(ref,im,show_fig,aux_titl,quanth,diff_coef)
+    % Enhances an image by preserving the edges located with a total variation mask.
+    %
+    % Inputs:
+    %   ref        - Reference image used for comparison or enhancement.
+    %   im         - Input image to be enhanced.
+    %   show_fig   - Boolean flag to determine whether to display figures (true/false).
+    %   aux_titl   - Title or additional information for figures (used if show_fig is true).
+    %   quant_h    - Quantile threshold for the TV mask (0-1, needs manual tuning).
+    %   diff_coef  - Coefficient for the diffusion filtering for the entire image and the masked edges.
+    %
+    % Outputs:
+    %   im_enh     - Enhanced image after applying the TV edge mask.
+    %   im_enhDiff - Enhanced image after applying diffusion to the input image.
+    %   im_enhTV   - Enhanced image after applying diffusion to the TV edge mask.
+    lm = imLims(im); im_size = size(im);
+    msk_fore = removeBackgroundSoft(im);
+    im_fore = msk_fore.*im;
+    im_enhDiff = anisodiff2D(im_fore, 5, 1/7, diff_coef, 2);
+    % Total variation
+    tv_im = TV(im_fore);
+    % Wavelet denoising of TV
+    tv_den = anisodiff2D(tv_im, 10, 1/7, 100, 2);
+    % Otsu thresholding of TV
+    % aux = abs(tv_den);
+    tv_msk_raw = removeBackgroundHard(im).*((tv_den>quantile(tv_den,quanth)).*tv_den > 0);
+    % Closing of TV mask
+    tv_msk =  imopen(imclose(tv_msk_raw,strel('disk',2)),strel('disk',2));
+    % Laplacian edges
+    % lap = lapEdge(im);
+    [lowp, lap] = smooth_edge(msk_fore.*im);
+    lap_msk = anisodiff2D(lap, 5, 1/7, diff_coef, 2).*tv_msk;
+    % Enhanced image
+    im_enh = lowp + lap.*tv_msk;
+    % TV enhanced image
+    im_enhTV = lowp + lap_msk;
+    for collapse_plots = 1
+        if show_fig
+            figure()
+            % subplot(2,2,1); imshow(ref,lm); title(sprintf('Original (SNR=%.1e)',SNR2(ref,sub_idx)))
+            % subplot(2,2,2); imshow(im,lm); title(sprintf('Image (SNR=%.1e, MSE=%.2e)',SNR2(im,sub_idx),mean((ref-removeBackgroundHard(im).*im).^2,'all')))
+            % subplot(2,3,5); imshow(im_enh,lm); title(sprintf('TV Mask (no diff) (SNR=%.1e, MSE=%.2e)',SNR2(im_enh,sub_idx),mean((ref-im_enh).^2,'all')))
+            % subplot(2,3,4); imshow(im_enhDiff,lm); title(sprintf('Diffusion (SNR=%.1e, MSE=%.2e)',SNR2(im_enhDiff,sub_idx),mean((ref-im_enhDiff).^2,'all')))
+            % subplot(2,3,6); imshow(im_enhTV,lm); title(sprintf('TV Mask (SNR=%.1e, MSE=%.2e)',SNR2(im_enhTV,sub_idx),mean((ref-im_enhTV).^2,'all')))
+            subplot(2,2,1); imshow(ref,lm); title('Original','Interpreter','latex','FontSize',15)
+            subplot(2,2,2); imshow(im,lm); title('Image','Interpreter','latex','FontSize',15)
+            subplot(2,3,4); imshow(im_enhDiff,lm); title('Diffusion','Interpreter','latex','FontSize',15)
+            subplot(2,3,5); imshow(im_enh,lm); title('Raw TV Edges','Interpreter','latex','FontSize',15)
+            subplot(2,3,6); imshow(im_enhTV,lm); title('Diffused TV Edges','Interpreter','latex','FontSize',15)
+            sgtitle(['Images $\&$ Results ',aux_titl],'Interpreter','latex','FontSize',18)
+            figure()
+            subplot(2,3,1); imshow(im,lm); title('Image','Interpreter','latex','FontSize',15)
+            subplot(2,3,4); imshow(tv_im,[]); title('TV','Interpreter','latex','FontSize',15)
+            subplot(2,3,2); imshow(tv_msk_raw,[]); title('TV mask','Interpreter','latex','FontSize',15)
+            subplot(2,3,5); imshow(tv_msk,[]); title('TV mask closed','Interpreter','latex','FontSize',15)
+            subplot(2,3,3); imshow(lap,[]); title('Edges','Interpreter','latex','FontSize',15)
+            subplot(2,3,6); imshow(lap_msk,[]); title('Edges mask','Interpreter','latex','FontSize',15)
+            sgtitle(['Processing ',aux_titl],'Interpreter','latex','FontSize',18)
+        end
+    end
+end
+
+function[tv_im] = TV(im)
+    % Get TV image
+    im_pad = imPad(im,1);
+    tv_im = (im_pad(2:end-1,2:end-1) - im_pad(2:end-1,3:end)).^2 + ...
+            (im_pad(2:end-1,2:end-1) - im_pad(3:end,2:end-1)).^2;
+    tv_im = sqrt(tv_im);
+end
+
+function[msk] = removeBackgroundHard(im)
+    im_den = anisodiff2D(im, 10, 1/7, 500, 1);
+    msk = imclose(otsuTH(im_den)>0,strel('disk',10));
+    msk = imdilate(msk,strel('disk',5));
+end
+
+function[msk] = removeBackgroundSoft(im)
+    % Avoids aliasing when filtering in Fourier space
+    im_den = anisodiff2D(im, 10, 1/7, 500, 1);
+    msk = imclose(otsuTH(im_den)>0,strel('disk',100));
+    msk = imdilate(msk,strel('disk',5));
+    msk = imfilter(ones(size(im)).*msk, fspecial('gaussian', [10 10], 100), 'replicate');
+end
+
+function[lp,hp]=smooth_edge(im)
+    % Split image into low-pass and high-pass images
+    ft = fftshift(fft2(im));
+    % Gaussian
+    [h,w] = size(im); sigma = min(h,w)/7; % quedar en 7
+    [xx, yy] = meshgrid(1:w, 1:h);
+    gs_msk = exp(-((xx-w/2).^2 + (yy-h/2).^2)/(2*sigma^2));
+    lp = abs(ifft2(ifftshift(ft.*gs_msk)));
+    hp = im - lp;
+end
+
+function[lims] = imLims(im)
+    lims = [min(im(:)),max(im(:))];
+end
