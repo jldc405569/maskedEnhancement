@@ -1,0 +1,31 @@
+im_size = [255,205];
+snrIdx = [125,145,165,185]; % Phantom
+% Image
+show_fig = false;
+ref = imPad(phantom(205),25); ref = ref(:,26:end-25); nrm_rf = norm(ref);
+ls = 20; logs = logspace(-1,0,ls); sigmas = logs.*std(ref(removeBackgroundHard(ref)));
+mse_im = []; mse_ed = []; mse_df = []; mse_tv = [];
+snr_im = []; snr_ed = []; snr_df = []; snr_tv = [];
+if show_fig && ls>4
+    input('CUT THE CAMERAS! PC is about to crash, stop running')
+end
+for ss = 1:ls
+    im = ref + sigmas(ss)*randn(size(ref)); % RELATIVE ERROR
+    aux_titl = sprintf('Phantom, sigma %.1e',logs(ss));
+    aux_titl = 'Phantom';
+    [im_ed,im_df,im_tv] = unsharpTVdiff(ref,im,show_fig,aux_titl,0.8,1);
+    im = removeBackgroundHard(im).*im;
+    for store_MSE_SNR = 1
+        mse_im(ss) = mean((im-ref).^2,'all')/nrm_rf;
+        mse_ed(ss) = mean((im_ed-ref).^2,'all')/nrm_rf;
+        mse_df(ss) = mean((im_df-ref).^2,'all')/nrm_rf;
+        mse_tv(ss) = mean((im_tv-ref).^2,'all')/nrm_rf;
+        snr_im(ss) = SNR2(im,snrIdx);
+        snr_ed(ss) = SNR2(im_ed,snrIdx);
+        snr_df(ss) = SNR2(im_df,snrIdx);
+        snr_tv(ss) = SNR2(im_tv,snrIdx);
+    end
+end
+%
+linePlots(sigmas, mse_im, mse_df, mse_ed, mse_tv, ...
+          'Phantom', snr_im, snr_df, snr_ed, snr_tv);
