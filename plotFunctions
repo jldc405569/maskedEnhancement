@@ -1,0 +1,57 @@
+function[]=linePlots(sigmas, mse_im, mse_df, mse_ed, mse_tv, ...
+                     aux_tt, snr_im, snr_df, snr_ed, snr_tv)
+    figure(); subplot(1,2,1); hold on
+    plot(sigmas,mse_im,'r','DisplayName','Noisy')
+    plot(sigmas,mse_df,'m','DisplayName','Diffusion')
+    plot(sigmas,mse_ed,'b','DisplayName','Raw TV Edges')
+    plot(sigmas,mse_tv,'g','DisplayName','Diffused TV Edges')
+    legend('Interpreter','latex'); title('MSE against noise $\sigma$','Interpreter','latex','FontSize',13)
+    ylabel('MSE','Interpreter','latex','FontSize',11);
+    xlabel('Noise $\sigma$','Interpreter','latex','FontSize',11); axis tight
+    subplot(1,2,2); hold on
+    plot(sigmas,snr_im,'r','DisplayName','Noisy')
+    plot(sigmas,snr_df,'m','DisplayName','Diffusion')
+    plot(sigmas,snr_ed,'b','DisplayName','Raw TV Edges')
+    plot(sigmas,snr_tv,'g','DisplayName','Diffused TV Edges')
+    legend('Interpreter','latex'); title('SNR against noise $\sigma$','Interpreter','latex','FontSize',13)
+    ylabel('SNR','Interpreter','latex','FontSize',11);
+    xlabel('Noise $\sigma$','Interpreter','latex','FontSize',11); axis tight
+    sgtitle([aux_tt,' Denoising results'],'Interpreter','latex','FontSize',15)
+end
+
+function[] = meshPlots(sigmas, im_vc, mse_im, mse_df, mse_ed, mse_tv, ...
+                       aux_tt, snr_im, snr_df, snr_ed, snr_tv)
+    figure(); subplot(2,2,1); hold on;
+    mesh(sigmas, im_vc, mse_im, 'FaceColor', 'r', 'EdgeColor', 'r', 'FaceAlpha', 0.7, 'DisplayName', 'Noisy');
+    mesh(sigmas, im_vc, mse_df, 'FaceColor', 'm', 'EdgeColor', 'm', 'FaceAlpha', 0.7, 'DisplayName', 'Diffusion');
+    mesh(sigmas, im_vc, mse_ed, 'FaceColor', 'b', 'EdgeColor', 'b', 'FaceAlpha', 0.7, 'DisplayName', 'Raw TV Edges');
+    mesh(sigmas, im_vc, mse_tv, 'FaceColor', 'g', 'EdgeColor', 'g', 'FaceAlpha', 0.7, 'DisplayName', 'Diffused TV Edges');
+    legend('Interpreter','latex'); title('MSE against noise $\sigma$','Interpreter','latex','FontSize',13); axis tight
+    xlabel('Noise $\sigma$','Interpreter','latex','FontSize',11); ylabel('Image idx','Interpreter','latex','FontSize',11); zlabel('MSE','Interpreter','latex','FontSize',11)
+    
+    subplot(2,2,2); hold on;
+    mesh(sigmas, im_vc, snr_im, 'FaceColor', 'r', 'EdgeColor', 'r', 'FaceAlpha', 0.7, 'DisplayName', 'Noisy');
+    mesh(sigmas, im_vc, snr_df, 'FaceColor', 'm', 'EdgeColor', 'm', 'FaceAlpha', 0.7, 'DisplayName', 'Diffusion');
+    mesh(sigmas, im_vc, snr_ed, 'FaceColor', 'b', 'EdgeColor', 'b', 'FaceAlpha', 0.7, 'DisplayName', 'Raw TV Edges');
+    mesh(sigmas, im_vc, snr_tv, 'FaceColor', 'g', 'EdgeColor', 'g', 'FaceAlpha', 0.7, 'DisplayName', 'Diffused TV Edges');
+    legend('Interpreter','latex'); title('SNR against noise $\sigma$','Interpreter','latex','FontSize',13); axis tight
+    xlabel('Noise $\sigma$','Interpreter','latex','FontSize',11); ylabel('Image idx','Interpreter','latex','FontSize',11); zlabel('SNR','Interpreter','latex','FontSize',11)
+
+    subplot(2,2,3); hold on;
+    plot(sigmas, squeeze(mean(mse_im,1)), 'r', 'DisplayName', 'Noisy');
+    plot(sigmas, squeeze(mean(mse_df,1)), 'm', 'DisplayName', 'Diffusion');
+    plot(sigmas, squeeze(mean(mse_ed,1)), 'b', 'DisplayName', 'Raw TV Edges');
+    plot(sigmas, squeeze(mean(mse_tv,1)), 'g', 'DisplayName', 'Diffused TV Edges');
+    legend('Interpreter','latex'); title('MSE against noise std','Interpreter','latex','FontSize',13); axis tight
+    xlabel('Noise $\sigma$','Interpreter','latex','FontSize',11); ylabel('MSE','Interpreter','latex','FontSize',11)
+    
+    subplot(2,2,4); hold on;
+    snr_im(isinf(snr_im)) = NaN;
+    plot(sigmas, squeeze(nanmean(snr_im,1)),'r', 'DisplayName', 'Noisy');
+    plot(sigmas, squeeze(mean(snr_df,1)),'m', 'DisplayName', 'Diffusion');
+    plot(sigmas, squeeze(mean(snr_ed,1)),'b', 'DisplayName', 'Raw TV Edges');
+    plot(sigmas, squeeze(mean(snr_tv,1)),'g', 'DisplayName', 'Diffused TV Edges');
+    legend('Interpreter','latex'); title('SNR against noise $\sigma$','Interpreter','latex','FontSize',13); axis tight
+    xlabel('Noise $\sigma$','Interpreter','latex','FontSize',11); ylabel('SNR','Interpreter','latex','FontSize',11)
+    sgtitle([aux_tt, ' Denoising results'],'Interpreter','latex','FontSize',15)
+end
